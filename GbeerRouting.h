@@ -15,6 +15,8 @@ class GbeerRouting: public VirtualRouting {
 	int greedy_forwarding(int, double, double);
 	void get_location(double *x ,double *y,int i);
 	void selectCell(int i,double x , double y);
+	bool neigh_distance(double x_src, double y_src, double x_dest, double y_dest, double thres);
+	double get_distance(double x , double y , double x_dest , double y_dest);
 
 };
 

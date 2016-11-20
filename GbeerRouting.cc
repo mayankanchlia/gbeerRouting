@@ -4,17 +4,71 @@
 #include <vector>
 
 Define_Module(GbeerRouting);
-
+#ifndef no_of_nodes
+#define no_of_nodes 20
+#endif
 //int cell_info[100];
-std::vector<int> cell_info[100000];
+std::vector<int> cell_info[no_of_nodes];
 
+
+struct nodeInfo {
+	int neigh_id;
+	double locX;
+	double locY;
+
+};
+
+int destination_x[no_of_nodes];
+int destination_y[no_of_nodes];
+int sink_x,sink_y;
+double thresh_distance = 5;
+std::vector<std::vector<nodeInfo>> greedy_neigh(no_of_nodes, std::vector<nodeInfo>());;
 void GbeerRouting::startup(){
 	double x_self , y_self;
 	get_location(&x_self,&y_self,atoi(SELF_NETWORK_ADDRESS));
 
 	trace() <<"X coord " << x_self << "y coord " << y_self;
-
 	selectCell(atoi(SELF_NETWORK_ADDRESS),x_self,y_self);
+
+		for(int i=0; i<no_of_nodes; i++){
+		double x ,y;
+		get_location(&x,&y,i);
+		//trace()<<"X coor "<<x;
+		// double y = getParentModule()->getParentModule()->getParentModule()->getSubmodule("node",i)->par("yCoor");
+		//trace()<<"Y coor "<<y;
+		 if(i != atoi(SELF_NETWORK_ADDRESS) && neigh_distance(x_self, y_self, x, y, thresh_distance)){
+			nodeInfo tmpInfo;
+			tmpInfo.locX = x;
+			tmpInfo.locY = y;
+			tmpInfo.neigh_id = i;
+			greedy_neigh[atoi(SELF_NETWORK_ADDRESS)].push_back(tmpInfo);
+		}
+	}
+	
+	destination_x[atoi(SELF_NETWORK_ADDRESS)] = sink_x;
+	destination_y[atoi(SELF_NETWORK_ADDRESS)] = sink_y;
+}
+
+double GbeerRouting::get_distance(double x , double y , double x_dest , double y_dest){
+ 
+ 	double distance = (x-x_dest)*(x-x_dest) + (y-y_dest)*(y-y_dest);
+ 	return distance;
+}
+int GbeerRouting::greedy_forwarding(int id, double x_dest, double y_dest){
+	double min = 10000;
+	int neigh_min = -1;
+	//trace()<<greedy_neigh[id].size();
+	for(int i=0; i<greedy_neigh[id].size(); i++){
+		double x = greedy_neigh[id].at(i).locX;
+		double y = greedy_neigh[id].at(i).locY;
+		double dist = get_distance(x, y, x_dest, y_dest);
+		//trace()<<x<<" "<<y<<" "<<greedy_neigh[id].at(i).neigh_id<<" "<<dist;
+		if(dist < min){
+			min = dist;
+			neigh_min = greedy_neigh[id].at(i).neigh_id;
+		}
+	}
+	return neigh_min;
 }
 
 void GbeerRouting::selectCell(int i,double x , double y){
@@ -55,14 +109,21 @@ void GbeerRouting::selectCell(int i,double x , double y){
 		else if ( x>60 && x<40) cell_info[24].push_back(i);
 		else if ( x>20 && x<40) cell_info[25].push_back(i);
 	}
-	
+
 }
+
+bool GbeerRouting::neigh_distance(double x_src, double y_src, double x_dest, double y_dest, double thres){
+	double temp = thres*thres;
+	double comp = (x_src - x_dest)*(x_src - x_dest) + (y_src - y_dest)*(y_src - y_dest);
+	if(comp <= temp)	return true;
+	return false;
+}
+
 
 
 void GbeerRouting::fromApplicationLayer(cPacket * pkt, const char *){
 	GbeerRoutingPacket *netPacket = new GbeerRoutingPacket("GbeerRoutingpacket", NETWORK_LAYER_PACKET);
-	// netPacket->setSource(SELF_NETWORK_ADDRESS);
-	// netPacket->setDestination(destination);	
+
 	encapsulatePacket(netPacket, pkt);
 }  
 
